@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATS Tarayıcı</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+
+    /* ── RENK PALETİ ── */
+    :root {
+      --bg:      #0f0f11;
+      --surface: #1a1a1f;
+      --border:  #2e2e38;
+      --accent:  #c8f135;
+      --text:    #e8e8e0;
+      --muted:   #6b6b72;
+      --red:     #ff5a5a;
+      --green:   #4ade80;
+    }
+
+    /* ── SIFIRLA ── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── SAYFA ── */
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 20px;
+    }
+
+    /* ── BAŞLIK ── */
+    header { text-align: center; margin-bottom: 48px; }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 2px;
+      padding: 4px 10px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 400;
+      line-height: 1.1;
+      color: var(--text);
+    }
+
+    h1 span { color: var(--accent); }
+
+    .subtitle {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    /* ── ANA KART ── */
+    .card {
+      width: 100%;
+      max-width: 780px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 40px;
+    }
+
+    /* ── BÖLÜM ETİKETİ ── */
+    .label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .label::before {
+      content: '';
+      width: 14px;
+      height: 1px;
+      background: var(--accent);
+      display: inline-block;
+    }
+
+    /* ── YÜKLEME ALANI ── */
+    .upload-zone {
+      border: 1px dashed var(--border);
+      border-radius: 4px;
+      padding: 36px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--accent);
+      background: rgba(200,241,53,0.03);
+    }
+
+    /* Gerçek input gizli ama tüm alanı kaplıyor */
+    #cv-input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-icon { font-size: 28px; color: var(--muted); margin-bottom: 10px; display: block; }
+    .upload-title { font-size: 13px; color: var(--text); margin-bottom: 4px; }
+    .upload-hint { font-size: 11px; color: var(--muted); }
+
+    /* Dosya seçilince gösterilecek bilgi */
+    .file-info {
+      display: none;
+      font-size: 12px;
+      color: var(--accent);
+      margin-top: 8px;
+      text-align: center;
+    }
+    .file-info.visible { display: block; }
+
+    /* ── TEXTAREA ── */
+    .textarea-wrap { margin-top: 28px; margin-bottom: 28px; }
+
+    textarea {
+      width: 100%;
+      height: 180px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      padding: 14px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea::placeholder { color: var(--muted); }
+    textarea:focus { border-color: var(--accent); }
+
+    /* ── BUTON ── */
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--accent);
+      color: #0f0f11;
+      border: none;
+      border-radius: 4px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+    .btn:active { transform: scale(0.99); }
+    .btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+    /* ── DURUM MESAJI ── */
+    .durum {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      min-height: 20px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── SONUÇ ALANI ── */
+    .sonuc {
+      display: none;
+      margin-top: 36px;
+      border-top: 1px solid var(--border);
+      padding-top: 36px;
+    }
+
+    /* Skor kutusu */
+    .skor-kutu {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 32px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 24px;
+    }
+
+    .skor-daire {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 500;
+      flex-shrink: 0;
+      /* Renk JavaScript ile ayarlanacak */
+    }
+
+    .skor-detay { flex: 1; }
+
+    .skor-baslik {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .ozet-metin {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Etiket grupları */
+    .etiket-grup { margin-bottom: 24px; }
+
+    .etiket-baslik {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .etiket-baslik::before {
+      content: '';
+      width: 14px;
+      height: 1px;
+      display: inline-block;
+    }
+
+    .etiket-baslik.kirmizi::before { background: var(--red); }
+    .etiket-baslik.yesil::before { background: var(--green); }
+
+    .etiketler { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .etiket {
+      font-size: 12px;
+      padding: 5px 12px;
+      border-radius: 2px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .etiket.eksik {
+      background: rgba(255,90,90,0.12);
+      color: var(--red);
+      border: 1px solid rgba(255,90,90,0.3);
+    }
+
+    .etiket.guclu {
+      background: rgba(74,222,128,0.1);
+      color: var(--green);
+      border: 1px solid rgba(74,222,128,0.25);
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- BAŞLIK -->
+  <header>
+    <div class="badge">ATS Asistanı · Gemma3:4b</div>
+    <h1>CV <span>&</span> İş İlanı<br>Eşleştirici</h1>
+    <p class="subtitle">CV'ni yükle · İlanı yapıştır · Eksikleri gör</p>
+  </header>
+
+  <!-- KART -->
+  <div class="card">
+
+    <!-- PDF YÜKLEME -->
+    <div class="label">01 · CV'ni yükle (PDF)</div>
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" id="cv-input" accept=".pdf">
+      <span class="upload-icon">⬆</span>
+      <p class="upload-title">PDF'i buraya sürükle veya tıkla</p>
+      <p class="upload-hint">Yalnızca .pdf</p>
+    </div>
+    <div class="file-info" id="file-info">✓ <span id="file-name"></span></div>
+
+    <!-- İŞ İLANI -->
+    <div class="textarea-wrap">
+      <div class="label">02 · İş ilanını yapıştır</div>
+      <textarea id="job-text" placeholder="İş ilanının tüm metnini buraya yapıştır..."></textarea>
+    </div>
+
+    <!-- BUTON -->
+    <button class="btn" onclick="handleAnalyze()">→ Analizi Başlat</button>
+
+    <!-- DURUM -->
+    <p class="durum" id="durum"></p>
+
+    <!-- SONUÇ ALANI -->
+    <div class="sonuc" id="sonuc-alani">
+
+      <!-- SKOR -->
+      <div class="skor-kutu">
+        <div class="skor-daire" id="skor-daire">
+          <span id="skor-yazi">—</span>
+        </div>
+        <div class="skor-detay">
+          <div class="skor-baslik">Uyum Skoru</div>
+          <p class="ozet-metin" id="ozet-yazi"></p>
+        </div>
+      </div>
+
+      <!-- EKSİK KELİMELER -->
+      <div class="etiket-grup">
+        <div class="etiket-baslik kirmizi">Eksik Anahtar Kelimeler</div>
+        <div class="etiketler" id="eksik-kelimeler"></div>
+      </div>
+
+      <!-- GÜÇLÜ YÖNLER -->
+      <div class="etiket-grup">
+        <div class="etiket-baslik yesil">Güçlü Yönlerin</div>
+        <div class="etiketler" id="guclu-yonler"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    // Ollama local — API key yok, internet yok
+    const OLLAMA_URL = 'http://localhost:11434/api/generate';
+    const MODEL = 'gemma3:4b';
+
+    let cvMetni = '';
+
+    // Dosya seçilince adını göster
+    document.getElementById('cv-input').addEventListener('change', function () {
+      if (this.files.length > 0) {
+        document.getElementById('file-name').textContent = this.files[0].name;
+        document.getElementById('file-info').classList.add('visible');
+      }
+    });
+
+    // İş ilanı metnini temizle
+    function ilanMetniTemizle(metin) {
+      metin = metin.toLowerCase();
+      metin = metin.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ0-9\s]/g, ' ');
+      metin = metin.replace(/\s+/g, ' ');
+      return metin.trim();
+    }
+
+    // Skora göre daire rengini ayarla
+    function skorRengi(skor) {
+      if (skor >= 70) return { bg: 'rgba(74,222,128,0.15)', color: '#4ade80', border: '2px solid rgba(74,222,128,0.4)' };
+      if (skor >= 40) return { bg: 'rgba(251,191,36,0.15)', color: '#fbbf24', border: '2px solid rgba(251,191,36,0.4)' };
+      return { bg: 'rgba(255,90,90,0.15)', color: '#ff5a5a', border: '2px solid rgba(255,90,90,0.4)' };
+    }
+
+    // Sonuçları ekranda göster
+    function sonuclariGoster(sonuc) {
+      document.getElementById('sonuc-alani').style.display = 'block';
+
+      // Skor dairesi
+      const skor = sonuc.skor || 0;
+      const renk = skorRengi(skor);
+      const daire = document.getElementById('skor-daire');
+      daire.style.background = renk.bg;
+      daire.style.color = renk.color;
+      daire.style.border = renk.border;
+      document.getElementById('skor-yazi').textContent = skor;
+
+      // Özet
+      document.getElementById('ozet-yazi').textContent = sonuc.ozet || '';
+
+      // Eksik kelimeler
+      const eksikDiv = document.getElementById('eksik-kelimeler');
+      eksikDiv.innerHTML = '';
+      (sonuc.eksikAnahtarKelimeler || []).forEach(k => {
+        const span = document.createElement('span');
+        span.className = 'etiket eksik';
+        span.textContent = k;
+        eksikDiv.appendChild(span);
+      });
+
+      // Güçlü yönler
+      const gucluDiv = document.getElementById('guclu-yonler');
+      gucluDiv.innerHTML = '';
+      (sonuc.gucluYonler || []).forEach(y => {
+        const span = document.createElement('span');
+        span.className = 'etiket guclu';
+        span.textContent = y;
+        gucluDiv.appendChild(span);
+      });
+    }
+
+    // Ana fonksiyon
+    async function handleAnalyze() {
+      const dosya = document.getElementById('cv-input').files[0];
+      const metin = document.getElementById('job-text').value;
+      const durum = document.getElementById('durum');
+      const btn   = document.querySelector('.btn');
+
+      if (!dosya || metin.length < 10) {
+        alert('Lütfen hem CV yükle hem de iş ilanı gir!');
+        return;
+      }
+
+      // Butonu devre dışı bırak, tekrar tıklanmasın
+      btn.disabled = true;
+      document.getElementById('sonuc-alani').style.display = 'none';
+
+      // PDF oku
+      durum.textContent = 'PDF okunuyor...';
+      const arrayBuffer = await dosya.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      durum.textContent = `${pdf.numPages} sayfa bulundu...`;
+
+      cvMetni = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const sayfa = await pdf.getPage(i);
+        const icerik = await sayfa.getTextContent();
+        cvMetni += icerik.items.map(item => item.str).join(' ') + '\n';
+      }
+
+      const temizMetin = ilanMetniTemizle(metin);
+
+      // Ollama'ya gönder
+      durum.textContent = 'Analiz ediliyor, bu 20-30 saniye sürebilir...';
+
+      const prompt = `
+Sen deneyimli bir ATS ve teknik işe alım uzmanısın.
+
+Görevin:
+CV ile iş ilanını karşılaştır.
+ÇOK DİKKATLİ analiz yap.
+CV'de açıkça geçen bir teknolojiyi ASLA eksik anahtar kelimelere yazma.
+Örneğin CV'de Python geçiyorsa Python eksik değildir.
+CV'de yapay zeka, AI, artificial intelligence gibi ifadeler varsa "yapay zeka" eksik değildir.
+CV'de blockchain geçiyorsa blockchain eksik değildir.
+CV'de LLM, RAG, agent, embedding, vector database gibi eş anlamlı kavramlar geçiyorsa bunları da eş anlamlı kabul et.
+Bunlar tüm sektörlerde kendi kurallarına,terimlerine göre geçerli.
+
+Kurallar:
+1. Önce CV'deki teknik becerileri anlamlandır.
+2. Sonra iş ilanındaki teknik beklentileri çıkar.
+3. İkisini karşılaştır.
+4. Önce iş ilanındaki beklentileri baz al.
+CV'yi bu beklentilere göre kontrol et.
+Eksik listeyi sadece şu formülle üret:
+Eksik = iş ilanında var + CV’de yok
+Güçlü = iş ilanında var + CV’de var
+5. Güçlü yönlere sadece CV ile iş ilanının gerçekten kesiştiği konuları yaz.
+6. Skoru 0-100 arasında ver.
+7. Açıklama detaylı, dürüst ve Türkçe olsun.
+8. JSON dışında hiçbir şey yazma.
+
+Karşılaştırma mantığı:
+1. İş ilanındaki gereksinimleri çıkar.
+2. CV'deki becerileri çıkar.
+3. Güçlü yönler = İş ilanında istenen ve CV'de bulunanlar.
+4. Eksik anahtar kelimeler = İş ilanında istenen ama CV'de bulunmayanlar.
+5. İş ilanında geçmeyen hiçbir şeyi eksik olarak yazma.
+
+Eğer iş ilanında istenen bir şey CV'de varsa:
+- güçlü yönlere yaz.
+- eksiklere yazma.
+
+Eğer iş ilanında istenen bir şey CV'de yoksa:
+- eksiklere yaz.
+
+JSON formatı tam olarak şöyle olsun:
+
+{
+  "skor": 85,
+  "ozet": "Adayın genel uyumunu 3-4 cümleyle açıkla.",
+  "gucluYonler": [
+    "CV ile ilanın kesiştiği güçlü teknik yön 1",
+    "CV ile ilanın kesiştiği güçlü teknik yön 2"
+  ],
+  "eksikAnahtarKelimeler": [
+  "Sadece iş ilanında olup CV'de bulunmayan beklenti 1",
+  "Sadece iş ilanında olup CV'de bulunmayan beklenti 2"
+],
+  "gelistirmeOnerileri": [
+    "CV'ye eklenirse skoru artıracak net öneri 1",
+    "CV'ye eklenirse skoru artıracak net öneri 2"
+  ],
+  "sonuc": "Bu aday bu ilana uygun mu, kısa ama net değerlendir."
+}
+
+CV METNİ:
+${cvMetni.slice(0, 3000)}
+
+İŞ İLANI:
+${temizMetin.slice(0, 1500)}
+      `;
+
+      const yanit = await fetch(OLLAMA_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: MODEL, prompt: prompt, stream: false })
+      });
+
+      const veri = await yanit.json();
+      // Modelin yanıtından sadece JSON kısmını çıkar
+      // Model bazen önce "Tabii, işte sonuç:" gibi şeyler yazıyor
+      // Bu kod { ile başlayan, } ile biten kısmı buluyor
+      const yanıtMetni = veri.response;
+      const jsonBaslangic = yanıtMetni.indexOf('{');
+      const jsonBitis = yanıtMetni.lastIndexOf('}');
+
+      if (jsonBaslangic === -1 || jsonBitis === -1) {
+        // JSON hiç bulunamadıysa kullanıcıya bildir
+        durum.textContent = '⚠ Model JSON üretmedi, tekrar dene.';
+        btn.disabled = false;
+        return;
+      }
+
+      // Sadece JSON kısmını kes
+      const temizJson = yanıtMetni.substring(jsonBaslangic, jsonBitis + 1);
+      const sonuc = JSON.parse(temizJson);
+
+      durum.textContent = `✓ Analiz tamam!`;
+      sonuclariGoster(sonuc);
+      btn.disabled = false;
+    }
+  </script>
+
+</body>
+</html>
