@@ -53,8 +53,12 @@ Kurulum
 
 Öncelikle projeyi bilgisayarına indir:
 
-git clone https://github.com/kullanici-adi/proje-adi.git
-cd proje-adi
+# Projeyi bilgisayarına indir
+git clone https://github.com/silatastekin/ats-tarayici.git
+
+# Proje klasörüne gir
+cd ats-tarayici
+
 Ollama Kurulumu
 
 Bu proje lokal LLM kullandığı için Ollama kurulu olmalıdır.
